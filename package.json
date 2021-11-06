@@ -1,0 +1,23 @@
+{
+  "name": "serverless-go",
+  "version": "0.0.1",
+  "description": "Serverless framework plugin for golang lambdas",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/renbou/serverless-go.git"
+  },
+  "author": "renbou",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/renbou/serverless-go/issues"
+  },
+  "homepage": "https://github.com/renbou/serverless-go#readme",
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "typescript": "^4.4.4"
+  }
+}
