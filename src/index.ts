@@ -114,7 +114,8 @@ class GolangPlugin implements ServerlessPlugin {
     slsFunction.package.patterns = slsFunction.package.patterns || [];
     slsFunction.package.patterns = new Array<string>().concat(
       "!./**",
-      slsFunction.package.patterns || []
+      slsFunction.package.patterns || [],
+      artifactPath
     );
     // We will later add the compiled artifact and set it as the runtime bootstrap
     slsFunction.runtime = AWS_RUNTIME;
@@ -145,6 +146,7 @@ class GolangPlugin implements ServerlessPlugin {
 
     // Package the handler as bootstrap
     const data = await readFile(artifactPath);
+    artifactZip.deleteFile(artifactPath);
     artifactZip.addFile(BOOTSTRAP_PATH, data, "", 0x755 << 16);
     artifactZip.writeZip(artifactZipPath);
   }
