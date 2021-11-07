@@ -148,7 +148,7 @@ class GolangPlugin implements ServerlessPlugin {
     // Package the handler as bootstrap
     const data = await readFile(artifactPath);
     artifactZip.deleteFile(this.osPath(artifactPath));
-    artifactZip.addFile(BOOTSTRAP_PATH, data, "", 0x755 << 16);
+    artifactZip.addFile(BOOTSTRAP_PATH, data, "", 0o755);
     artifactZip.writeZip(artifactZipPath);
 
     // Set required runtime

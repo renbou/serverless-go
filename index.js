@@ -93,7 +93,7 @@ class GolangPlugin {
         // Package the handler as bootstrap
         const data = await (0, promises_1.readFile)(artifactPath);
         artifactZip.deleteFile(this.osPath(artifactPath));
-        artifactZip.addFile(BOOTSTRAP_PATH, data, "", 0x755 << 16);
+        artifactZip.addFile(BOOTSTRAP_PATH, data, "", 0o755);
         artifactZip.writeZip(artifactZipPath);
         // Set required runtime
         slsFunction.runtime = AWS_RUNTIME;
