@@ -5,7 +5,6 @@ import ServerlessPlugin = require("serverless/classes/Plugin");
 import ServerlessUtils = require("serverless/classes/Utils");
 import Serverless = require("serverless");
 import ServerlessError = require("serverless/lib/serverless-error");
-import pMap from "p-map";
 import { execFile as callbackExecFile } from "child_process";
 import { promisify } from "util";
 
@@ -54,6 +53,7 @@ class GolangPlugin implements ServerlessPlugin {
       message: `Building ${functions.length} functions with ${concurrency} parallel processes`,
     });
 
+    const pMap = (await import("p-map")).default;
     await pMap(functions, this.buildFunction, {
       concurrency: concurrency,
     });
