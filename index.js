@@ -1,7 +1,7 @@
 "use strict";
 const os = require("os");
 const path = require("path");
-const AdmZip = require("adm-zip");
+const JsZIP = require("jszip");
 const ServerlessError = require("serverless/lib/serverless-error");
 const child_process_1 = require("child_process");
 const util_1 = require("util");
@@ -10,6 +10,7 @@ const execFile = (0, util_1.promisify)(child_process_1.execFile);
 const GO_RUNTIME = "go";
 const AWS_RUNTIME = "provided.al2";
 const BOOTSTRAP_PATH = "bootstrap";
+const FAKE_FILE = ".tmp";
 class GolangPlugin {
     constructor(serverless, _) {
         this.serverless = serverless;
@@ -35,6 +36,7 @@ class GolangPlugin {
     async build() {
         const service = this.serverless.service;
         const functions = service.getAllFunctions();
+        await (0, promises_1.writeFile)(this.artifactPath(FAKE_FILE), "");
         this.log(`Building ${functions.length} functions with ${this.concurrency} parallel processes`);
         await this.pMap(functions, this.buildFunction.bind(this));
     }
@@ -68,7 +70,7 @@ class GolangPlugin {
         slsFunction.package = slsFunction.package || {};
         slsFunction.package.individually = true;
         slsFunction.package.patterns = slsFunction.package.patterns || [];
-        slsFunction.package.patterns = new Array().concat("!./**", slsFunction.package.patterns || [], this.osPath(artifactPath));
+        slsFunction.package.patterns = new Array().concat("!./**", slsFunction.package.patterns || [], this.osPath(this.artifactPath(FAKE_FILE)));
     }
     async packageBootstrap() {
         const service = this.serverless.service;
@@ -89,12 +91,14 @@ class GolangPlugin {
         // Artifact path definitely exists after packaging step
         const artifactZipPath = slsFunction.package.artifact;
         const artifactPath = this.artifactPath(functionName);
-        const artifactZip = new AdmZip(artifactZipPath);
+        const artifactZip = await JsZIP.loadAsync(artifactZipPath);
         // Package the handler as bootstrap
         const data = await (0, promises_1.readFile)(artifactPath);
-        artifactZip.deleteFile(this.osPath(artifactPath));
-        artifactZip.addFile(BOOTSTRAP_PATH, data, "", 0o755);
-        artifactZip.writeZip(artifactZipPath);
+        artifactZip.file(BOOTSTRAP_PATH, data, {
+            unixPermissions: "755",
+        });
+        const zipContent = await artifactZip.generateAsync({ type: "nodebuffer" });
+        await (0, promises_1.writeFile)(artifactZipPath, zipContent);
         // Set required runtime
         slsFunction.runtime = AWS_RUNTIME;
     }
