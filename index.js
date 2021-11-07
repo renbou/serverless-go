@@ -100,7 +100,7 @@ class GolangPlugin {
             type: "nodebuffer",
             compression: "DEFLATE",
             compressionOptions: {
-                level: 9,
+                level: 6,
             },
         });
         await (0, promises_1.writeFile)(artifactZipPath, zipContent);
