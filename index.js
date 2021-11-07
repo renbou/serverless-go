@@ -4,12 +4,12 @@ const path = require("path");
 const ServerlessError = require("serverless/lib/serverless-error");
 const child_process_1 = require("child_process");
 const util_1 = require("util");
-const promises_1 = require("fs/promises");
 const execFile = (0, util_1.promisify)(child_process_1.execFile);
 const GO_RUNTIME = "go";
 const AWS_RUNTIME = "provided.al2";
 const BOOTSTRAP_PATH = "bootstrap";
-const FAKE_FILE = ".tmp";
+// Error code thrown by resolveFilePathsFromPatterns if no files were matched
+const NO_MATCHED_FILES_CODE = "NO_MATCHED_FILES";
 class GolangPlugin {
     constructor(serverless, _) {
         this.serverless = serverless;
@@ -33,14 +33,8 @@ class GolangPlugin {
     async build() {
         const service = this.serverless.service;
         const functions = service.getAllFunctions();
-        await (0, promises_1.writeFile)(this.artifactPath(FAKE_FILE), "");
         this.log(`Building ${functions.length} functions with ${this.concurrency} parallel processes`);
-        try {
-            await this.pMap(functions, this.buildFunction.bind(this));
-        }
-        catch (e) {
-            throw e;
-        }
+        await this.pMap(functions, this.buildFunction.bind(this));
         if (service.provider.runtime === GO_RUNTIME) {
             // Set global runtime if it was set to go previously
             service.provider.runtime = AWS_RUNTIME;
@@ -63,23 +57,29 @@ class GolangPlugin {
         });
         // Begin and wait for compilation of handler
         const packagePath = slsFunction.handler;
-        const artifactPath = this.artifactPath(functionName);
+        const [artifactDirectory, artifactPath] = this.artifactLocation(functionName);
         try {
             await execFile("go", this.buildArgs(artifactPath, packagePath), {
                 env: this.buildEnv(process.env),
             });
         }
         catch (e) {
-            return new ServerlessError(`Unable to compile ${functionName}: ${e.message}`);
+            throw new ServerlessError(`Unable to compile ${functionName}: ${e}`);
         }
         // Package the function using builtin service!
         slsFunction.package = slsFunction.package || {};
         slsFunction.package.individually = true;
         slsFunction.package.patterns = slsFunction.package.patterns || [];
-        slsFunction.package.artifact = await this.packagePlugin.zip({
-            include: slsFunction.package.patterns.concat("!./**", artifactPath),
-            zipFileName: `${functionName}.zip`,
-        });
+        if ([slsFunction.package.exclude, slsFunction.package.include].some(Boolean)) {
+            this.log(`${functionName} package references exclude or include, which are deprecated`, {
+                bold: true,
+                color: "red",
+            });
+        }
+        const artifactFilePaths = await this.functionArtifactPaths(functionName, slsFunction);
+        // Actually package all artifacts. This will strip artifactDirectory,
+        // thus the artifact itself will end up at BOOTSTRAP_PATH
+        slsFunction.package.artifact = await this.packagePlugin.zipFiles(artifactFilePaths, `${functionName}.zip`, artifactDirectory);
         slsFunction.runtime = AWS_RUNTIME;
     }
     isGoRuntime(slsFunction) {
@@ -98,18 +98,33 @@ class GolangPlugin {
         };
         return Object.assign({}, env, defaultEnv);
     }
-    osPath(path) {
-        if (process.platform === "win32") {
-            return path.replace(/\\/g, "/");
-        }
-        return path;
+    artifactLocation(functionName) {
+        const directory = this.artifactDirectory(functionName);
+        return [directory, path.join(BOOTSTRAP_PATH)];
     }
-    artifactPath(functionName) {
-        return path.join(this.artifactDirectory(), functionName);
+    artifactDirectory(functionName) {
+        return path.join(".bin", functionName);
     }
-    artifactDirectory() {
-        // TODO: Better naming + user config?
-        return ".bin";
+    async functionArtifactPaths(functionName, slsFunction) {
+        const [artifactDirectory, artifactPath] = this.artifactLocation(functionName);
+        let artifactFilePaths = await this.packagePlugin
+            .resolveFilePathsFromPatterns({
+            include: ["!./**", ...slsFunction.package.patterns],
+            exclude: [],
+        })
+            .catch((e) => {
+            if (e instanceof ServerlessError && e.code == NO_MATCHED_FILES_CODE) {
+                // No files matched from defined patterns
+                return [];
+            }
+            // Rethrow
+            throw e;
+        });
+        // Append fake prefix which will be later removed.
+        // Dirty hack to make our actual artifact end up in the correct path.
+        artifactFilePaths = artifactFilePaths.map((filePath) => path.join(artifactDirectory, filePath));
+        artifactFilePaths.push(artifactPath);
+        return artifactFilePaths;
     }
     async pMap(iterable, mapper) {
         await this.importPmap();
