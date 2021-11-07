@@ -146,11 +146,10 @@ class GolangPlugin implements ServerlessPlugin {
     // Artifact path definitely exists after packaging step
     const artifactZipPath = slsFunction.package!.artifact!;
     const artifactPath = this.artifactPath(functionName);
-    const artifactZip = await JsZIP.loadAsync(artifactZipPath);
+    const artifactZip = await JsZIP.loadAsync(await readFile(artifactZipPath));
 
     // Package the handler as bootstrap
-    const data = await readFile(artifactPath);
-    artifactZip.file(BOOTSTRAP_PATH, data, {
+    artifactZip.file(BOOTSTRAP_PATH, await readFile(artifactPath), {
       unixPermissions: "755",
     });
     const zipContent = await artifactZip.generateAsync({ type: "nodebuffer" });

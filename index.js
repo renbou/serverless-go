@@ -91,10 +91,9 @@ class GolangPlugin {
         // Artifact path definitely exists after packaging step
         const artifactZipPath = slsFunction.package.artifact;
         const artifactPath = this.artifactPath(functionName);
-        const artifactZip = await JsZIP.loadAsync(artifactZipPath);
+        const artifactZip = await JsZIP.loadAsync(await (0, promises_1.readFile)(artifactZipPath));
         // Package the handler as bootstrap
-        const data = await (0, promises_1.readFile)(artifactPath);
-        artifactZip.file(BOOTSTRAP_PATH, data, {
+        artifactZip.file(BOOTSTRAP_PATH, await (0, promises_1.readFile)(artifactPath), {
             unixPermissions: "755",
         });
         const zipContent = await artifactZip.generateAsync({ type: "nodebuffer" });
