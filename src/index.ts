@@ -152,7 +152,13 @@ class GolangPlugin implements ServerlessPlugin {
     artifactZip.file(BOOTSTRAP_PATH, await readFile(artifactPath), {
       unixPermissions: "755",
     });
-    const zipContent = await artifactZip.generateAsync({ type: "nodebuffer" });
+    const zipContent = await artifactZip.generateAsync({
+      type: "nodebuffer",
+      compression: "DEFLATE",
+      compressionOptions: {
+        level: 9,
+      },
+    });
     await writeFile(artifactZipPath, zipContent);
 
     // Set required runtime
