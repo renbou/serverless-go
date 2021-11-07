@@ -37,9 +37,6 @@ class GolangPlugin {
         const functions = service.getAllFunctions();
         this.log(`Building ${functions.length} functions with ${this.concurrency} parallel processes`);
         await this.pMap(functions, this.buildFunction.bind(this));
-        if (service.provider.runtime === GO_RUNTIME) {
-            service.provider.runtime = AWS_RUNTIME;
-        }
     }
     async buildFunction(functionName) {
         const service = this.serverless.service;
@@ -72,13 +69,15 @@ class GolangPlugin {
         slsFunction.package.individually = true;
         slsFunction.package.patterns = slsFunction.package.patterns || [];
         slsFunction.package.patterns = new Array().concat("!./**", slsFunction.package.patterns || [], artifactPath);
-        // We will later add the compiled artifact and set it as the runtime bootstrap
-        slsFunction.runtime = AWS_RUNTIME;
     }
     async packageBootstrap() {
         const service = this.serverless.service;
         this.log("Packaging each function as runtime bootstrap");
-        await this.pMap(service.getAllFunctions(), this.packageFunction.bind(this));
+        await Promise.all(service.getAllFunctions().map(this.packageFunction.bind(this)));
+        if (service.provider.runtime === GO_RUNTIME) {
+            // Set global runtime if it was set to go previously
+            service.provider.runtime = AWS_RUNTIME;
+        }
     }
     async packageFunction(functionName) {
         const service = this.serverless.service;
@@ -96,6 +95,8 @@ class GolangPlugin {
         artifactZip.deleteFile(artifactPath);
         artifactZip.addFile(BOOTSTRAP_PATH, data, "", 0x755 << 16);
         artifactZip.writeZip(artifactZipPath);
+        // Set required runtime
+        slsFunction.runtime = AWS_RUNTIME;
     }
     isGoRuntime(slsFunction) {
         const service = this.serverless.service;
