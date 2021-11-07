@@ -1,10 +1,7 @@
 import * as os from "os";
 import * as path from "path";
-import JsZIP = require("jszip");
 import AwsProvider = require("serverless/plugins/aws/provider/awsProvider");
 import ServerlessPlugin = require("serverless/classes/Plugin");
-import ServerlessService = require("serverless/classes/Service");
-import ServerlessUtils = require("serverless/classes/Utils");
 import Serverless = require("serverless");
 import ServerlessError = require("serverless/lib/serverless-error");
 import { execFile as callbackExecFile } from "child_process";
@@ -18,9 +15,16 @@ const AWS_RUNTIME = "provided.al2";
 const BOOTSTRAP_PATH = "bootstrap";
 const FAKE_FILE = ".tmp";
 
+// Stub for serverless frameworks's builtin package plugin, which also
+// exports a zipping function. Handy!
+interface ServerlessPackagePluginStub extends ServerlessPlugin {
+  zip(options: { include: string[]; zipFileName: string }): Promise<string>;
+}
+
 class GolangPlugin implements ServerlessPlugin {
   hooks: ServerlessPlugin.Hooks;
   serverless: Serverless;
+  packagePlugin: ServerlessPackagePluginStub;
   provider: AwsProvider;
   log: (message: string, options?: Serverless.LogOptions) => null;
 
@@ -44,16 +48,17 @@ class GolangPlugin implements ServerlessPlugin {
     this.serverless.configSchemaHandler.schema.definitions.awsLambdaRuntime.enum.push(
       "go"
     );
-    // Do not run the dev dependency exclusion, since we are excluding everything anyways
-    this.serverless.service.package.excludeDevDependencies = false;
+
+    // Get serverless' builtin packager. This WILL break -> requires upkeep.
+    // from serverless/lib/plugins/index.js
+    this.packagePlugin = <ServerlessPackagePluginStub>(
+      this.serverless.pluginManager.plugins[4]
+    );
 
     const build = this.build.bind(this);
-    const repackageBootstrap = this.packageBootstrap.bind(this);
     this.hooks = {
-      // Compiles all packages/files and adjust sls config
+      // Compile all packages/files and adjust sls config
       "before:package:createDeploymentArtifacts": build,
-      // Fixes naming - renames packaged artifact to bootstrap
-      "after:package:createDeploymentArtifacts": repackageBootstrap,
     };
   }
 
@@ -66,7 +71,16 @@ class GolangPlugin implements ServerlessPlugin {
     this.log(
       `Building ${functions.length} functions with ${this.concurrency} parallel processes`
     );
-    await this.pMap(functions, this.buildFunction.bind(this));
+    try {
+      await this.pMap(functions, this.buildFunction.bind(this));
+    } catch (e) {
+      throw e;
+    }
+
+    if (service.provider.runtime === GO_RUNTIME) {
+      // Set global runtime if it was set to go previously
+      service.provider.runtime = AWS_RUNTIME;
+    }
   }
 
   async buildFunction(functionName: string) {
@@ -107,61 +121,16 @@ class GolangPlugin implements ServerlessPlugin {
       );
     }
 
-    // Modify function package definition so that each function is properly packaged
+    // Package the function using builtin service!
     slsFunction.package = slsFunction.package || {};
     slsFunction.package.individually = true;
     slsFunction.package.patterns = slsFunction.package.patterns || [];
-    slsFunction.package.patterns = new Array<string>().concat(
-      "!./**",
-      slsFunction.package.patterns || [],
-      this.osPath(this.artifactPath(FAKE_FILE))
-    );
-  }
 
-  async packageBootstrap() {
-    const service = this.serverless.service;
-
-    this.log("Packaging each function as runtime bootstrap");
-
-    await Promise.all(
-      service.getAllFunctions().map(this.packageFunction.bind(this))
-    );
-
-    if (service.provider.runtime === GO_RUNTIME) {
-      // Set global runtime if it was set to go previously
-      service.provider.runtime = AWS_RUNTIME;
-    }
-  }
-
-  async packageFunction(functionName: string) {
-    const service = this.serverless.service;
-    // Already validated everything during build
-    const slsFunction = <Serverless.FunctionDefinitionHandler>(
-      service.getFunction(functionName)
-    );
-    if (!this.isGoRuntime(slsFunction)) {
-      return;
-    }
-
-    // Artifact path definitely exists after packaging step
-    const artifactZipPath = slsFunction.package!.artifact!;
-    const artifactPath = this.artifactPath(functionName);
-    const artifactZip = await JsZIP.loadAsync(await readFile(artifactZipPath));
-
-    // Package the handler as bootstrap
-    artifactZip.file(BOOTSTRAP_PATH, await readFile(artifactPath), {
-      unixPermissions: "755",
+    slsFunction.package.artifact = await this.packagePlugin.zip({
+      include: slsFunction.package.patterns.concat("!./**", artifactPath),
+      zipFileName: `${functionName}.zip`,
     });
-    const zipContent = await artifactZip.generateAsync({
-      type: "nodebuffer",
-      compression: "DEFLATE",
-      compressionOptions: {
-        level: 6,
-      },
-    });
-    await writeFile(artifactZipPath, zipContent);
 
-    // Set required runtime
     slsFunction.runtime = AWS_RUNTIME;
   }
 
