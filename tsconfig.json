@@ -1,6 +1,6 @@
 {
   "files": [
-    "src/index.ts"
+    "src/index.ts", "decs.d.ts"
   ],
   "compilerOptions": {
     "strict": true,
