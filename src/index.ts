@@ -28,6 +28,14 @@ class GolangPlugin implements ServerlessPlugin {
     // Bind to provider == aws
     this.provider = this.serverless.getProvider("aws");
 
+    // Add custom runtime to defined runtimes. This is so that strict validation doesn't fail
+    // @ts-ignore
+    this.serverless.configSchemaHandler.schema.definitions.awsLambdaRuntime.enum.push(
+      "go"
+    );
+    // Do not run the dev dependency exclusion, since we are excluding everything anyways
+    this.serverless.service.package.excludeDevDependencies = false;
+
     const build = this.build.bind(this);
     const repackageBootstrap = this.repackageBootstrap.bind(this);
     this.hooks = {
