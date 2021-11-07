@@ -17,18 +17,13 @@ const BOOTSTRAP_PATH = "bootstrap";
 class GolangPlugin implements ServerlessPlugin {
   hooks: ServerlessPlugin.Hooks;
   serverless: Serverless;
-  log: ServerlessUtils.Log;
-  progress: ServerlessUtils.ProgressEmitter;
+  log: (message: string, options?: Serverless.LogOptions) => null;
   provider: AwsProvider;
 
-  constructor(
-    serverless: Serverless,
-    _: Serverless.Options,
-    { log, progress }: PluginOptions
-  ) {
+  constructor(serverless: Serverless, _: Serverless.Options) {
     this.serverless = serverless;
-    this.log = log;
-    this.progress = progress;
+    this.log = (message, options?) =>
+      this.serverless.cli.log(message, "GolangPlugin", options);
 
     // Bind to provider == aws
     this.provider = this.serverless.getProvider("aws");
@@ -48,17 +43,14 @@ class GolangPlugin implements ServerlessPlugin {
     const functions = service.getAllFunctions();
     const concurrency = os.cpus().length;
 
-    const progress = this.progress.create({
-      name: "golang-plugin",
-      message: `Building ${functions.length} functions with ${concurrency} parallel processes`,
-    });
+    this.log(
+      `Building ${functions.length} functions with ${concurrency} parallel processes`
+    );
 
     const pMap = (await import("p-map")).default;
-    await pMap(functions, this.buildFunction, {
+    await pMap(functions, this.buildFunction.bind(this), {
       concurrency: concurrency,
     });
-
-    progress.remove();
 
     if (service.provider.runtime === GO_RUNTIME) {
       service.provider.runtime = AWS_RUNTIME;
@@ -86,13 +78,15 @@ class GolangPlugin implements ServerlessPlugin {
       return;
     }
 
-    this.log.info(`Building Golang function ${functionName}`);
+    this.log(`Building Golang function ${functionName}`, {
+      color: "white",
+    });
 
     // Begin and wait for compilation of handler
     const packagePath = slsFunction.handler;
-    const artifactPath = this.artifactPath(packagePath);
+    const artifactPath = this.artifactPath(functionName);
     try {
-      await execFile("go", this.buildArgs(packagePath, artifactPath), {
+      await execFile("go", this.buildArgs(artifactPath, packagePath), {
         env: this.buildEnv(process.env),
       });
     } catch (e) {
@@ -106,6 +100,7 @@ class GolangPlugin implements ServerlessPlugin {
     slsFunction.package.individually = true;
     slsFunction.package.patterns = slsFunction.package.patterns || [];
     slsFunction.package.patterns = new Array<string>().concat(
+      "!./**",
       slsFunction.package.patterns || [],
       artifactPath
     );
@@ -117,7 +112,7 @@ class GolangPlugin implements ServerlessPlugin {
   async repackageBootstrap() {}
 
   buildArgs(artifactPath: string, packagePath: string) {
-    return ["build", `-ldflags="-s -w"`, "-o", artifactPath, packagePath];
+    return ["build", `-ldflags=-s -w`, "-o", artifactPath, packagePath];
   }
 
   buildEnv(env: { [key: string]: any }) {
@@ -129,8 +124,8 @@ class GolangPlugin implements ServerlessPlugin {
     return Object.assign({}, env, defaultEnv);
   }
 
-  artifactPath(packagePath: string) {
-    return path.join(this.artifactDirectory(), packagePath);
+  artifactPath(functionName: string) {
+    return path.join(this.artifactDirectory(), functionName);
   }
 
   artifactDirectory() {
