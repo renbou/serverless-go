@@ -88,11 +88,11 @@ class GolangPlugin {
         }
         // Artifact path definitely exists after packaging step
         const artifactZipPath = slsFunction.package.artifact;
-        const artifactPath = this.osPath(this.artifactPath(functionName));
+        const artifactPath = this.artifactPath(functionName);
         const artifactZip = new AdmZip(artifactZipPath);
         // Package the handler as bootstrap
         const data = await (0, promises_1.readFile)(artifactPath);
-        artifactZip.deleteFile(artifactPath);
+        artifactZip.deleteFile(this.osPath(artifactPath));
         artifactZip.addFile(BOOTSTRAP_PATH, data, "", 0x755 << 16);
         artifactZip.writeZip(artifactZipPath);
         // Set required runtime
@@ -116,7 +116,7 @@ class GolangPlugin {
     }
     osPath(path) {
         if (process.platform === "win32") {
-            return path.replace(/\//g, "\\");
+            return path.replace(/\\/g, "/");
         }
         return path;
     }
