@@ -100,7 +100,7 @@ class GolangPlugin {
     }
     artifactLocation(functionName) {
         const directory = this.artifactDirectory(functionName);
-        return [directory, path.join(BOOTSTRAP_PATH)];
+        return [directory, path.join(directory, BOOTSTRAP_PATH)];
     }
     artifactDirectory(functionName) {
         return path.join(".bin", functionName);

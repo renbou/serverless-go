@@ -182,7 +182,7 @@ class GolangPlugin implements ServerlessPlugin {
 
   artifactLocation(functionName: string) {
     const directory = this.artifactDirectory(functionName);
-    return [directory, path.join(BOOTSTRAP_PATH)];
+    return [directory, path.join(directory, BOOTSTRAP_PATH)];
   }
 
   artifactDirectory(functionName: string) {
