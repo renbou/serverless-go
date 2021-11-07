@@ -46,10 +46,19 @@ class GolangPlugin implements ServerlessPlugin {
 
   async build() {
     const service = this.serverless.service;
+    const functions = service.getAllFunctions();
+    const concurrency = os.cpus().length;
 
-    await pMap(service.getAllFunctions(), this.buildFunction, {
-      concurrency: os.cpus().length,
+    const progress = this.progress.create({
+      name: "golang-plugin",
+      message: `Building ${functions.length} functions with ${concurrency} parallel processes`,
     });
+
+    await pMap(functions, this.buildFunction, {
+      concurrency: concurrency,
+    });
+
+    progress.remove();
 
     if (service.provider.runtime === GO_RUNTIME) {
       service.provider.runtime = AWS_RUNTIME;
@@ -76,6 +85,8 @@ class GolangPlugin implements ServerlessPlugin {
     if (runtime !== GO_RUNTIME) {
       return;
     }
+
+    this.log.info(`Building Golang function ${functionName}`);
 
     // Begin and wait for compilation of handler
     const packagePath = slsFunction.handler;
