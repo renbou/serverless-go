@@ -33,7 +33,7 @@ class GolangPlugin {
         const functions = service.getAllFunctions();
         const concurrency = os.cpus().length;
         this.log(`Building ${functions.length} functions with ${concurrency} parallel processes`);
-        const pMap = (await Promise.resolve().then(() => require("p-map"))).default;
+        const pMap = (await import("p-map")).default;
         await pMap(functions, this.buildFunction.bind(this), {
             concurrency: concurrency,
         });
