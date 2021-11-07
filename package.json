@@ -2,7 +2,7 @@
   "name": "serverless-go",
   "version": "0.0.1",
   "description": "Serverless framework plugin for golang lambdas",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc && sed -i 's/(await Promise.resolve().then(() => require(\"p-map\")))/(await import(\"p-map\"))/g' index.js"
   },

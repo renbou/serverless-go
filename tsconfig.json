@@ -1,11 +1,23 @@
 {
   "files": [
-    "src/index.ts", "decs.d.ts"
+    "decs.d.ts"
+  ],
+  "include": [
+    "src/*.ts",
+  ],
+  "exclude": [
+    "src/lib/*"
   ],
   "compilerOptions": {
     "strict": true,
     "target": "ES2021",
-    "module": "CommonJS",
-    "outDir": ".",
-  }
+    "module": "node12",
+    "moduleResolution": "Node",
+    "rootDir": "src",
+    "outDir": "dist",
+    "allowJs": true
+  },
+  "references": [
+    {"lib": "lib/tsconfig.json"}
+  ]
 }
