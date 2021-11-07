@@ -68,7 +68,7 @@ class GolangPlugin {
         slsFunction.package = slsFunction.package || {};
         slsFunction.package.individually = true;
         slsFunction.package.patterns = slsFunction.package.patterns || [];
-        slsFunction.package.patterns = new Array().concat("!./**", slsFunction.package.patterns || [], artifactPath);
+        slsFunction.package.patterns = new Array().concat("!./**", slsFunction.package.patterns || [], this.osPath(artifactPath));
     }
     async packageBootstrap() {
         const service = this.serverless.service;
@@ -88,7 +88,7 @@ class GolangPlugin {
         }
         // Artifact path definitely exists after packaging step
         const artifactZipPath = slsFunction.package.artifact;
-        const artifactPath = this.artifactPath(functionName);
+        const artifactPath = this.osPath(this.artifactPath(functionName));
         const artifactZip = new AdmZip(artifactZipPath);
         // Package the handler as bootstrap
         const data = await (0, promises_1.readFile)(artifactPath);
@@ -113,6 +113,12 @@ class GolangPlugin {
             CGO_ENABLED: "0",
         };
         return Object.assign({}, env, defaultEnv);
+    }
+    osPath(path) {
+        if (process.platform === "win32") {
+            return path.replace(/\//g, "\\");
+        }
+        return path;
     }
     artifactPath(functionName) {
         return path.join(this.artifactDirectory(), functionName);

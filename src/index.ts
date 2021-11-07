@@ -111,7 +111,7 @@ class GolangPlugin implements ServerlessPlugin {
     slsFunction.package.patterns = new Array<string>().concat(
       "!./**",
       slsFunction.package.patterns || [],
-      artifactPath
+      this.osPath(artifactPath)
     );
   }
 
@@ -142,7 +142,7 @@ class GolangPlugin implements ServerlessPlugin {
 
     // Artifact path definitely exists after packaging step
     const artifactZipPath = slsFunction.package!.artifact;
-    const artifactPath = this.artifactPath(functionName);
+    const artifactPath = this.osPath(this.artifactPath(functionName));
     const artifactZip = new AdmZip(artifactZipPath);
 
     // Package the handler as bootstrap
@@ -176,6 +176,13 @@ class GolangPlugin implements ServerlessPlugin {
       CGO_ENABLED: "0",
     };
     return Object.assign({}, env, defaultEnv);
+  }
+
+  osPath(path: string) {
+    if (process.platform === "win32") {
+      return path.replace(/\//g, "\\");
+    }
+    return path;
   }
 
   artifactPath(functionName: string) {
