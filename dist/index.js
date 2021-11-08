@@ -19,7 +19,9 @@ class GolangPlugin {
         this.builder = new builder_1.default(Const.ARTIFACT_BASE, Const.BOOTSTRAP_PATH);
         // Get serverless' builtin packager. This WILL break -> requires upkeep.
         // from serverless/lib/plugins/index.js
-        this.packager = new packager_1.default(serverless.serverlessDirPath, Const.BOOTSTRAP_PATH, serverless.pluginManager.plugins[4]);
+        this.packager = new packager_1.default(
+        // @ts-ignore
+        serverless.serviceDir, Const.BOOTSTRAP_PATH, serverless.pluginManager.plugins[4]);
         this.logger = new logger_1.default("GolangPlugin", serverless.cli.log);
         this.validator = new validator_1.default(this.service, this.logger);
         this.hooks = {

@@ -25,7 +25,7 @@ const NO_MATCHED_FILES_CODE = "NO_MATCHED_FILES";
 // Making sure it ends up in the root of the built zip. Useful to us
 // for packaging bootstrap for aws provided runtime.
 class Packager {
-    constructor(serverlessDir, executableName, packagePlugin) {
+    constructor(serviceDir, executableName, packagePlugin) {
         _Packager_instances.add(this);
         // Builtin serverless framework packager plugin which
         // we will shamelessly exploit for its functionality
@@ -34,7 +34,7 @@ class Packager {
         _Packager_serverlessDir.set(this, void 0);
         // Name of executable which we will package "specially"
         _Packager_executableName.set(this, void 0);
-        __classPrivateFieldSet(this, _Packager_serverlessDir, serverlessDir, "f");
+        __classPrivateFieldSet(this, _Packager_serverlessDir, path.join(serviceDir, constants_1.SERVERLESS_DIR), "f");
         __classPrivateFieldSet(this, _Packager_executableName, executableName, "f");
         __classPrivateFieldSet(this, _Packager_packagePlugin, packagePlugin, "f");
     }

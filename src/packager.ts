@@ -4,7 +4,7 @@ import * as fs from "fs/promises";
 import archiver = require("archiver");
 import ServerlessPlugin = require("serverless/classes/Plugin");
 import ServerlessError = require("serverless/lib/serverless-error");
-import { CONCURRENCY } from "./constants";
+import { CONCURRENCY, SERVERLESS_DIR } from "./constants";
 
 // Stub for serverless frameworks's builtin package plugin,
 // which will help us do all of the needed package deps resolution. Nice!
@@ -33,11 +33,11 @@ class Packager {
   static #defaultPatterns = ["!./**"];
 
   constructor(
-    serverlessDir: string,
+    serviceDir: string,
     executableName: string,
     packagePlugin: ServerlessPackagePluginStub
   ) {
-    this.#serverlessDir = serverlessDir;
+    this.#serverlessDir = path.join(serviceDir, SERVERLESS_DIR);
     this.#executableName = executableName;
     this.#packagePlugin = packagePlugin;
   }

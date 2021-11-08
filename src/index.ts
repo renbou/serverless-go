@@ -41,7 +41,8 @@ class GolangPlugin implements ServerlessPlugin {
     // Get serverless' builtin packager. This WILL break -> requires upkeep.
     // from serverless/lib/plugins/index.js
     this.packager = new Packager(
-      serverless.serverlessDirPath,
+      // @ts-ignore
+      serverless.serviceDir,
       Const.BOOTSTRAP_PATH,
       <ServerlessPackagePluginStub>serverless.pluginManager.plugins[4]
     );
