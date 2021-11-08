@@ -1,53 +1,53 @@
 import * as os from "os";
-import AwsProvider = require("serverless/plugins/aws/provider/awsProvider");
-import ServerlessPlugin = require("serverless/classes/Plugin");
 import Serverless = require("serverless");
+import AwsProvider = require("serverless/plugins/aws/provider/awsProvider");
+import ServerlessService = require("serverless/classes/Service");
+import ServerlessPlugin = require("serverless/classes/Plugin");
 import ServerlessError = require("serverless/lib/serverless-error");
 import pMap = require("./pmap");
 import Builder from "./builder";
 import Packager, { ServerlessPackagePluginStub } from "./packager";
-
-const GO_RUNTIME = "go";
-const AWS_RUNTIME = "provided.al2";
-const ARTIFACT_BASE = ".bin";
-const BOOTSTRAP_PATH = "bootstrap";
+import Logger from "./logger";
+import * as Const from "./constants";
+import Validator from "./validator";
 
 class GolangPlugin implements ServerlessPlugin {
-  serverless: Serverless;
+  service: ServerlessService;
   options: Serverless.Options;
   provider: AwsProvider;
-  log: (message: string, options?: Serverless.LogOptions) => null;
 
   concurrency: number;
   builder: Builder;
   packager: Packager;
+  logger: Logger;
+  validator: Validator;
 
   hooks: ServerlessPlugin.Hooks;
 
   constructor(serverless: Serverless, options: Serverless.Options) {
-    this.serverless = serverless;
+    this.service = serverless.service;
     this.options = options;
-    this.log = (message, options?) =>
-      this.serverless.cli.log(message, "GolangPlugin", options);
 
     // Bind to provider == aws
-    this.provider = this.serverless.getProvider("aws");
+    this.provider = serverless.getProvider("aws");
 
     // Add custom runtime to defined runtimes. This is so that strict validation doesn't fail
     // @ts-ignore
-    this.serverless.configSchemaHandler.schema.definitions.awsLambdaRuntime.enum.push(
+    serverless.configSchemaHandler.schema.definitions.awsLambdaRuntime.enum.push(
       "go"
     );
 
     // Set up build options and instances
     this.concurrency = os.cpus().length;
-    this.builder = new Builder(ARTIFACT_BASE, BOOTSTRAP_PATH);
+    this.builder = new Builder(Const.ARTIFACT_BASE, Const.BOOTSTRAP_PATH);
     // Get serverless' builtin packager. This WILL break -> requires upkeep.
     // from serverless/lib/plugins/index.js
     this.packager = new Packager(
-      BOOTSTRAP_PATH,
-      <ServerlessPackagePluginStub>this.serverless.pluginManager.plugins[4]
+      Const.BOOTSTRAP_PATH,
+      <ServerlessPackagePluginStub>serverless.pluginManager.plugins[4]
     );
+    this.logger = new Logger("GolangPlugin", serverless.cli.log);
+    this.validator = new Validator(this.service, this.logger);
 
     this.hooks = {
       // Compile all packages/files and adjust sls config
@@ -58,12 +58,11 @@ class GolangPlugin implements ServerlessPlugin {
   }
 
   async build() {
-    const service = this.serverless.service;
-    const functions = service.getAllFunctions();
+    const functions = this.service.getAllFunctions();
     await this.buildFunctions(functions);
-    if (service.provider.runtime === GO_RUNTIME) {
+    if (this.service.provider.runtime === Const.GO_RUNTIME) {
       // Set global runtime if it was set to go previously
-      service.provider.runtime = AWS_RUNTIME;
+      this.service.provider.runtime = Const.AWS_RUNTIME;
     }
   }
 
@@ -72,7 +71,7 @@ class GolangPlugin implements ServerlessPlugin {
   }
 
   async buildFunctions(functions: string[]) {
-    this.log(
+    this.logger.info(
       `Building ${functions.length} functions with ${this.concurrency} parallel processes`
     );
 
@@ -82,48 +81,17 @@ class GolangPlugin implements ServerlessPlugin {
   }
 
   async buildFunction(functionName: string) {
-    const service = this.serverless.service;
-    const slsFunctionDefinition = service.getFunction(functionName);
-
-    // Skip non-go runtimes
-    if (!this.isGoRuntime(slsFunctionDefinition)) {
+    const slsFunction = this.validator.validateFunction(functionName);
+    if (slsFunction === null) {
       return;
     }
-    // Make sure we have a valid handler-function definition
-    if (
-      !Object.prototype.hasOwnProperty.call(slsFunctionDefinition, "handler")
-    ) {
-      throw new ServerlessError(
-        `Golang plugin can only be used to build handler-type functions, but ${functionName} doesn't have the "handler" property defined`
-      );
-    }
 
-    const slsFunction = <Serverless.FunctionDefinitionHandler>(
-      slsFunctionDefinition
-    );
-
-    this.log(`Building Golang function ${functionName}`, {
-      color: "white",
-    });
+    this.logger.debug(`Building Golang function ${functionName}`);
     const artifactDirectory = await this.builder
       .build(functionName, slsFunction.handler)
       .catch((e) => {
         throw new ServerlessError(`Unable to compile ${functionName}: ${e}`);
       });
-
-    // Package the function using builtin service!
-
-    if (
-      [slsFunction.package?.exclude, slsFunction.package?.include].some(Boolean)
-    ) {
-      this.log(
-        `${functionName} package references exclude or include, which are deprecated`,
-        {
-          bold: true,
-          color: "red",
-        }
-      );
-    }
 
     // Actually package all artifacts. This will strip artifactDirectory,
     // thus the artifact itself will end up at BOOTSTRAP_PATH
@@ -134,25 +102,11 @@ class GolangPlugin implements ServerlessPlugin {
     );
 
     slsFunction.package = Object.assign(slsFunction.package || {}, {
-      // For good measure make sure we don't get this packaged with anything  else
-      individually: true,
-      // Actual runtime which will be used in aws
-      runtime: AWS_RUNTIME,
-      // Exclude everything for all other plugins
-      patterns: ["!./**"],
-      // Our hand-made customly-built artifact
-      artifact,
+      individually: true, // For good measure make sure we don't get this packaged with anything  else
+      runtime: Const.AWS_RUNTIME, // Actual runtime which will be used in aws
+      patterns: ["!./**"], // Exclude everything for all other plugins
+      artifact, // Our hand-made customly-built artifact
     });
-  }
-
-  isGoRuntime(
-    slsFunction:
-      | Serverless.FunctionDefinitionHandler
-      | Serverless.FunctionDefinitionImage
-  ) {
-    const service = this.serverless.service;
-    const runtime = slsFunction.runtime || service.provider.runtime;
-    return runtime == GO_RUNTIME;
   }
 }
 

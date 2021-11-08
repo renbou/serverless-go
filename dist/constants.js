@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PLUGIN_NAMESPACE = exports.BOOTSTRAP_PATH = exports.ARTIFACT_BASE = exports.AWS_RUNTIME = exports.GO_RUNTIME = void 0;
+const GO_RUNTIME = "go";
+exports.GO_RUNTIME = GO_RUNTIME;
+const AWS_RUNTIME = "provided.al2";
+exports.AWS_RUNTIME = AWS_RUNTIME;
+const ARTIFACT_BASE = ".bin";
+exports.ARTIFACT_BASE = ARTIFACT_BASE;
+const BOOTSTRAP_PATH = "bootstrap";
+exports.BOOTSTRAP_PATH = BOOTSTRAP_PATH;
+const PLUGIN_NAMESPACE = "GolangPlugin";
+exports.PLUGIN_NAMESPACE = PLUGIN_NAMESPACE;
