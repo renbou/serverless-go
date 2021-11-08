@@ -1,3 +1,4 @@
+"use strict";
 var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
     if (kind === "m") throw new TypeError("Private method is not writable");
     if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
@@ -10,9 +11,11 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
     return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
 var _Builder_instances, _a, _Builder_baseArtifactDirectory, _Builder_executableName, _Builder_env, _Builder_defaultEnv, _Builder_defaultArgs, _Builder_artifactPath, _Builder_buildArgs, _Builder_buildEnv;
-import { execFile as callbackExecFile } from "child_process";
-import { promisify } from "util";
-const execFile = promisify(callbackExecFile);
+Object.defineProperty(exports, "__esModule", { value: true });
+const child_process_1 = require("child_process");
+const util_1 = require("util");
+const path = require("path");
+const execFile = (0, util_1.promisify)(child_process_1.execFile);
 // Builder allows building various golang packages as different "modules"
 // which all compile into an executable file with the same name for each module.
 // Useful to us since we need to compile all packages into "bootstrap"
@@ -57,4 +60,4 @@ _Builder_defaultEnv = { value: {
         CGO_ENABLED: "0",
     } };
 _Builder_defaultArgs = { value: ["build", "-ldflags=-s -w", "-o"] };
-export default Builder;
+exports.default = Builder;

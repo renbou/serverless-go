@@ -5,19 +5,12 @@
   "include": [
     "src/*.ts",
   ],
-  "exclude": [
-    "src/lib/*"
-  ],
   "compilerOptions": {
     "strict": true,
     "target": "ES2021",
-    "module": "node12",
-    "moduleResolution": "Node",
+    "module": "CommonJS",
     "rootDir": "src",
     "outDir": "dist",
     "allowJs": true
   },
-  "references": [
-    {"lib": "lib/tsconfig.json"}
-  ]
 }

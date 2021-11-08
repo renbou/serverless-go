@@ -6,7 +6,7 @@ let pMapModule = null;
 
 async function pMap(input, mapper, options) {
   if (pMapModule === null) {
-    pMapModule = (await import("p-map")).default;
+    pMapModule = await eval('import("p-map")').default;
   }
   return pMapModule(input, mapper, options);
 }

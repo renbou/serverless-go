@@ -1,10 +1,9 @@
 import * as os from "os";
-import * as path from "path";
 import AwsProvider = require("serverless/plugins/aws/provider/awsProvider");
 import ServerlessPlugin = require("serverless/classes/Plugin");
 import Serverless = require("serverless");
 import ServerlessError = require("serverless/lib/serverless-error");
-import pMap = require("./lib/pmap");
+import pMap = require("./pmap");
 import Builder from "./builder";
 import Packager, { ServerlessPackagePluginStub } from "./packager";
 

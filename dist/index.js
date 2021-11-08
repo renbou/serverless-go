@@ -1,6 +1,9 @@
-import * as os from "os";
-import Builder from "./builder";
-import Packager from "./packager";
+"use strict";
+const os = require("os");
+const ServerlessError = require("serverless/lib/serverless-error");
+const pMap = require("./pmap");
+const builder_1 = require("./builder");
+const packager_1 = require("./packager");
 const GO_RUNTIME = "go";
 const AWS_RUNTIME = "provided.al2";
 const ARTIFACT_BASE = ".bin";
@@ -16,10 +19,10 @@ class GolangPlugin {
         this.serverless.configSchemaHandler.schema.definitions.awsLambdaRuntime.enum.push("go");
         // Set up build options and instances
         this.concurrency = os.cpus().length;
-        this.builder = new Builder(ARTIFACT_BASE, BOOTSTRAP_PATH);
+        this.builder = new builder_1.default(ARTIFACT_BASE, BOOTSTRAP_PATH);
         // Get serverless' builtin packager. This WILL break -> requires upkeep.
         // from serverless/lib/plugins/index.js
-        this.packager = new Packager(BOOTSTRAP_PATH, this.serverless.pluginManager.plugins[4]);
+        this.packager = new packager_1.default(BOOTSTRAP_PATH, this.serverless.pluginManager.plugins[4]);
         const build = this.build.bind(this);
         this.hooks = {
             // Compile all packages/files and adjust sls config
@@ -85,3 +88,4 @@ class GolangPlugin {
         return runtime == GO_RUNTIME;
     }
 }
+module.exports = GolangPlugin;

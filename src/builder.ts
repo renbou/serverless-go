@@ -1,6 +1,6 @@
 import { execFile as callbackExecFile } from "child_process";
 import { promisify } from "util";
-import path = require("path");
+import * as path from "path";
 const execFile = promisify(callbackExecFile);
 
 type Environment = { [key: string]: any };

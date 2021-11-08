@@ -4,7 +4,7 @@
   "description": "Serverless framework plugin for golang lambdas",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && sed -i 's/(await Promise.resolve().then(() => require(\"p-map\")))/(await import(\"p-map\"))/g' index.js"
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
