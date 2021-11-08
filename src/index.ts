@@ -14,6 +14,7 @@ const BOOTSTRAP_PATH = "bootstrap";
 
 class GolangPlugin implements ServerlessPlugin {
   serverless: Serverless;
+  options: Serverless.Options;
   provider: AwsProvider;
   log: (message: string, options?: Serverless.LogOptions) => null;
 
@@ -23,8 +24,9 @@ class GolangPlugin implements ServerlessPlugin {
 
   hooks: ServerlessPlugin.Hooks;
 
-  constructor(serverless: Serverless, _: Serverless.Options) {
+  constructor(serverless: Serverless, options: Serverless.Options) {
     this.serverless = serverless;
+    this.options = options;
     this.log = (message, options?) =>
       this.serverless.cli.log(message, "GolangPlugin", options);
 
@@ -47,17 +49,29 @@ class GolangPlugin implements ServerlessPlugin {
       <ServerlessPackagePluginStub>this.serverless.pluginManager.plugins[4]
     );
 
-    const build = this.build.bind(this);
     this.hooks = {
       // Compile all packages/files and adjust sls config
-      "before:package:createDeploymentArtifacts": build,
+      "before:package:createDeploymentArtifacts": this.build.bind(this),
+      // Compile a single specific package/function
+      "before:deploy:function:packageFunction": this.buildSingle.bind(this),
     };
   }
 
   async build() {
     const service = this.serverless.service;
     const functions = service.getAllFunctions();
+    await this.buildFunctions(functions);
+    if (service.provider.runtime === GO_RUNTIME) {
+      // Set global runtime if it was set to go previously
+      service.provider.runtime = AWS_RUNTIME;
+    }
+  }
 
+  async buildSingle() {
+    return this.buildFunctions([this.options.function!]);
+  }
+
+  async buildFunctions(functions: string[]) {
     this.log(
       `Building ${functions.length} functions with ${this.concurrency} parallel processes`
     );
@@ -65,11 +79,6 @@ class GolangPlugin implements ServerlessPlugin {
     await pMap(functions, this.buildFunction.bind(this), {
       concurrency: this.concurrency,
     });
-
-    if (service.provider.runtime === GO_RUNTIME) {
-      // Set global runtime if it was set to go previously
-      service.provider.runtime = AWS_RUNTIME;
-    }
   }
 
   async buildFunction(functionName: string) {

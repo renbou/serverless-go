@@ -1,10 +1,11 @@
 {
   "name": "serverless-go",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Serverless framework plugin for golang lambdas",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
