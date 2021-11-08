@@ -16,7 +16,6 @@ class GolangPlugin implements ServerlessPlugin {
   options: Serverless.Options;
   provider: AwsProvider;
 
-  concurrency: number;
   builder: Builder;
   packager: Packager;
   logger: Logger;
@@ -38,11 +37,12 @@ class GolangPlugin implements ServerlessPlugin {
     );
 
     // Set up build options and instances
-    this.concurrency = os.cpus().length;
     this.builder = new Builder(Const.ARTIFACT_BASE, Const.BOOTSTRAP_PATH);
     // Get serverless' builtin packager. This WILL break -> requires upkeep.
     // from serverless/lib/plugins/index.js
     this.packager = new Packager(
+      // @ts-ignore
+      serverless.serviceDir,
       Const.BOOTSTRAP_PATH,
       <ServerlessPackagePluginStub>serverless.pluginManager.plugins[4]
     );
@@ -72,13 +72,13 @@ class GolangPlugin implements ServerlessPlugin {
 
   async buildFunctions(functions: string[]) {
     this.logger.info(
-      `Building ${functions.length} functions with ${this.concurrency} parallel processes`
+      `Building ${functions.length} functions with ${Const.CONCURRENCY} parallel processes`
     );
 
     // Make sure we only launch a limited number of compilations concurrently
     const goFunctions: string[][] = (
       await pMap(functions, this.buildFunction.bind(this), {
-        concurrency: this.concurrency,
+        concurrency: Const.CONCURRENCY,
       })
     ).filter(Boolean);
 

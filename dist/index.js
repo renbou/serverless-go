@@ -1,5 +1,4 @@
 "use strict";
-const os = require("os");
 const ServerlessError = require("serverless/lib/serverless-error");
 const pMap = require("./pmap");
 const builder_1 = require("./builder");
@@ -17,11 +16,12 @@ class GolangPlugin {
         // @ts-ignore
         serverless.configSchemaHandler.schema.definitions.awsLambdaRuntime.enum.push("go");
         // Set up build options and instances
-        this.concurrency = os.cpus().length;
         this.builder = new builder_1.default(Const.ARTIFACT_BASE, Const.BOOTSTRAP_PATH);
         // Get serverless' builtin packager. This WILL break -> requires upkeep.
         // from serverless/lib/plugins/index.js
-        this.packager = new packager_1.default(Const.BOOTSTRAP_PATH, serverless.pluginManager.plugins[4]);
+        this.packager = new packager_1.default(
+        // @ts-ignore
+        serverless.serviceDir, Const.BOOTSTRAP_PATH, serverless.pluginManager.plugins[4]);
         this.logger = new logger_1.default("GolangPlugin", serverless.cli.log);
         this.validator = new validator_1.default(this.service, this.logger);
         this.hooks = {
@@ -43,10 +43,10 @@ class GolangPlugin {
         return this.buildFunctions([this.options.function]);
     }
     async buildFunctions(functions) {
-        this.logger.info(`Building ${functions.length} functions with ${this.concurrency} parallel processes`);
+        this.logger.info(`Building ${functions.length} functions with ${Const.CONCURRENCY} parallel processes`);
         // Make sure we only launch a limited number of compilations concurrently
         const goFunctions = (await pMap(functions, this.buildFunction.bind(this), {
-            concurrency: this.concurrency,
+            concurrency: Const.CONCURRENCY,
         })).filter(Boolean);
         this.logger.info(`Packaging functions`);
         // However archives can be built without a limit, since the archiver module
