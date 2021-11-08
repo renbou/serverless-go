@@ -75,24 +75,40 @@ class GolangPlugin implements ServerlessPlugin {
       `Building ${functions.length} functions with ${this.concurrency} parallel processes`
     );
 
-    await pMap(functions, this.buildFunction.bind(this), {
-      concurrency: this.concurrency,
-    });
+    // Make sure we only launch a limited number of compilations concurrently
+    const goFunctions: string[][] = (
+      await pMap(functions, this.buildFunction.bind(this), {
+        concurrency: this.concurrency,
+      })
+    ).filter(Boolean);
+
+    this.logger.info(`Packaging functions`);
+    // However archives can be built without a limit, since the archiver module
+    // underneath limits itself anyways
+    await Promise.all(
+      goFunctions.map(([functionName, artifactDirectory]) =>
+        this.packageFunction(functionName, artifactDirectory)
+      )
+    );
   }
 
   async buildFunction(functionName: string) {
     const slsFunction = this.validator.validateFunction(functionName);
     if (slsFunction === null) {
-      return;
+      return null;
     }
 
     this.logger.debug(`Building Golang function ${functionName}`);
-    const artifactDirectory = await this.builder
-      .build(functionName, slsFunction.handler)
-      .catch((e) => {
+    return [
+      functionName,
+      await this.builder.build(functionName, slsFunction.handler).catch((e) => {
         throw new ServerlessError(`Unable to compile ${functionName}: ${e}`);
-      });
+      }),
+    ];
+  }
 
+  async packageFunction(functionName: string, artifactDirectory: string) {
+    const slsFunction = this.service.getFunction(functionName);
     // Actually package all artifacts. This will strip artifactDirectory,
     // thus the artifact itself will end up at BOOTSTRAP_PATH
     const artifact = await this.packager.package(
