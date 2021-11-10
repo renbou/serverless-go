@@ -13,6 +13,9 @@ interface ServerlessPackagePluginStub extends ServerlessPlugin {
     include: string[];
     exclude: string[];
   }): Promise<string[]>;
+
+  getIncludes(patterns: string[]): string[];
+  getExcludes(patterns: string[], excludeLayers: boolean): string[];
 }
 // Error code thrown by resolveFilePathsFromPatterns if no files were matched
 const NO_MATCHED_FILES_CODE = "NO_MATCHED_FILES";
@@ -30,7 +33,7 @@ class Packager {
   // Name of executable which we will package "specially"
   #executableName: string;
 
-  static #defaultPatterns = ["!./**"];
+  static #defaultPatterns = ["!**/node_modules/**"];
 
   constructor(
     serviceDir: string,
@@ -49,10 +52,11 @@ class Packager {
     artifactDirectory: string,
     packagePatterns: string[] | undefined
   ) {
+    const patterns = Packager.#defaultPatterns.concat(packagePatterns || []);
     let artifactFiles = await this.#packagePlugin
       .resolveFilePathsFromPatterns({
-        include: Packager.#defaultPatterns.concat(packagePatterns || []),
-        exclude: [],
+        include: this.#packagePlugin.getIncludes(patterns),
+        exclude: this.#packagePlugin.getExcludes(patterns, true),
       })
       .catch((e) => {
         // Handle no matched files error from package resolver

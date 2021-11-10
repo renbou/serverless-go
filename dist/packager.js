@@ -41,10 +41,11 @@ class Packager {
     // Package will package an artifact directory with additional files defined by
     // packagePatterns and return the path to module's zip.
     async package(module, artifactDirectory, packagePatterns) {
+        const patterns = __classPrivateFieldGet(Packager, _a, "f", _Packager_defaultPatterns).concat(packagePatterns || []);
         let artifactFiles = await __classPrivateFieldGet(this, _Packager_packagePlugin, "f")
             .resolveFilePathsFromPatterns({
-            include: __classPrivateFieldGet(Packager, _a, "f", _Packager_defaultPatterns).concat(packagePatterns || []),
-            exclude: [],
+            include: __classPrivateFieldGet(this, _Packager_packagePlugin, "f").getIncludes(patterns),
+            exclude: __classPrivateFieldGet(this, _Packager_packagePlugin, "f").getExcludes(patterns, true),
         })
             .catch((e) => {
             // Handle no matched files error from package resolver
@@ -99,5 +100,5 @@ _a = Packager, _Packager_packagePlugin = new WeakMap(), _Packager_serverlessDir 
     }
     return;
 };
-_Packager_defaultPatterns = { value: ["!./**"] };
+_Packager_defaultPatterns = { value: ["!**/node_modules/**"] };
 exports.default = Packager;
