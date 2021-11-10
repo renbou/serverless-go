@@ -3,7 +3,7 @@ import Serverless = require("serverless");
 import AwsProvider = require("serverless/plugins/aws/provider/awsProvider");
 import ServerlessService = require("serverless/classes/Service");
 import ServerlessPlugin = require("serverless/classes/Plugin");
-import ServerlessError = require("serverless/lib/serverless-error");
+import ServerlessError = require("@serverless-rewrite/serverless/lib/serverless-error");
 import pMap = require("./pmap");
 import Builder from "./builder";
 import Packager, { ServerlessPackagePluginStub } from "./packager";

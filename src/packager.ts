@@ -3,7 +3,7 @@ import { existsSync, createWriteStream } from "fs";
 import * as fs from "fs/promises";
 import archiver = require("archiver");
 import ServerlessPlugin = require("serverless/classes/Plugin");
-import ServerlessError = require("serverless/lib/serverless-error");
+import ServerlessError = require("@serverless-rewrite/serverless/lib/serverless-error");
 import { CONCURRENCY, SERVERLESS_DIR } from "./constants";
 
 // Stub for serverless frameworks's builtin package plugin,
