@@ -16,7 +16,7 @@ const path = require("path");
 const fs_1 = require("fs");
 const fs = require("fs/promises");
 const archiver = require("archiver");
-const ServerlessError = require("serverless/lib/serverless-error");
+const ServerlessError = require("@serverless-rewrite/serverless/lib/serverless-error");
 const constants_1 = require("./constants");
 // Error code thrown by resolveFilePathsFromPatterns if no files were matched
 const NO_MATCHED_FILES_CODE = "NO_MATCHED_FILES";

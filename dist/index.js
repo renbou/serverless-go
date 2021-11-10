@@ -1,5 +1,5 @@
 "use strict";
-const ServerlessError = require("serverless/lib/serverless-error");
+const ServerlessError = require("@serverless-rewrite/serverless/lib/serverless-error");
 const pMap = require("./pmap");
 const builder_1 = require("./builder");
 const packager_1 = require("./packager");
